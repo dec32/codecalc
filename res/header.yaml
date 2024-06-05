@@ -1,0 +1,13 @@
+# Rime dictionary
+# encoding: utf-8
+# {}
+
+---
+name: {}
+version: 20240424
+sort: by_weight
+columns:
+  - text
+  - code
+  - weight
+...
