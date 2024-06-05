@@ -5,7 +5,7 @@ use crate::Result;
 use anyhow::Error;
 
 // 全碼
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Code {
     pub conso: u8,
     pub vowel: u8, 

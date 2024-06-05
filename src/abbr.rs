@@ -5,10 +5,20 @@ use crate::{code::Code, Dict, PathExt, Result, Text};
 /// 生成略碼
 #[allow(unused)]
 pub fn gen(char_dict: Dict, word_dict: Dict, target: impl AsRef<Path>) -> Result<()> {
-    // 建立單字全碼索引
-    let mut char_codes = HashMap::new();
+
+    // 建立單字全碼索引（多音字取權重最高的發音）
+    let mut char_vocabs = HashMap::new();
     for vocab in char_dict.vocabs.iter() {
         let char = vocab.text.chars().next().unwrap();
+        let prev = char_vocabs.insert(char, vocab);
+        if let Some(prev) = prev {
+            if prev.weight >= vocab.weight {
+                char_vocabs.insert(char, prev);
+            }
+        }
+    }
+    let mut char_codes = HashMap::new();
+    for (char, vocab) in char_vocabs {
         let Ok(code) = Code::try_from(vocab.spell) else {
             println!("無法解析單字「{}」的全碼 {:?}。", vocab.text, vocab.spell);
             continue;
@@ -28,7 +38,6 @@ pub fn gen(char_dict: Dict, word_dict: Dict, target: impl AsRef<Path>) -> Result
                 // 單字有兩種通碼：聲韻、聲韻首
                 common_tab.entry(text([a.conso, a.vowel])).or_insert(Vec::new()).push(vocab.clone());
                 common_tab.entry(text([a.conso, a.vowel, a.head])).or_insert(Vec::new()).push(vocab.clone());
-                
             }
             [a, b] => {
                 // 雙字詞只有一種通碼：聲韻聲韻
@@ -56,7 +65,7 @@ pub fn gen(char_dict: Dict, word_dict: Dict, target: impl AsRef<Path>) -> Result
         let min_weight = match count {
             0 | 1 => u32::MAX,
             2 => 3_0000,
-            3 => 500,
+            3 => 1000,
             4 => 200,
             _ => u32::MAX,
         };
@@ -84,12 +93,12 @@ pub fn gen(char_dict: Dict, word_dict: Dict, target: impl AsRef<Path>) -> Result
                 } else {
                     // TODO：調頻是不可靠的，最有有效的辦法應當是把二簡置頂寫入方案的邏輯中
                     vocabs[0].weight = u32::MAX;
-                    println!("{}：採納「{}」，下調「{}」", abbr, vocabs[0].text, most.text)
+                    println!("{}：採納「{}」下調「{}」", abbr.to_ascii_uppercase(), vocabs[0].text, most.text)
                 }
             };
         }
 
-        // TODO：避免三簡影响造句
+        // TODO：避免三簡影响造句（提高權重限制 or 降權？）
     }
 
 
